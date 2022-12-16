@@ -42,6 +42,8 @@ define
 	MapCheck
 	ListUpdate
 	MapUpdate
+	Abs
+	ManhattanDistance
 	RandomInRange = fun {$ Min Max} Min+({OS.rand}mod(Max-Min+1)) end
 in
 	fun {StartPlayer Color ID}
@@ -89,7 +91,7 @@ in
 			[] sayShoot(ID Position) then {SayShoot State ID Position}
             [] sayDeath(ID) then {SayDeath State ID}
             [] sayDamageTaken(ID Damage LifeLeft) then {SayDamageTaken State ID Damage LifeLeft}
-			[] takeFlag(?ID ?Flag Color) then {TakeFlag State ID Flag Color}
+			[] takeFlag(?ID ?Flag) then {TakeFlag State ID Flag}
 			[] dropFlag(?ID ?Flag) then {DropFlag State ID Flag}
 			[] sayFlagTaken(ID Flag) then {SayFlagTaken State ID Flag}
 			[] sayFlagDropped(ID Flag) then {SayFlagDropped State ID flag}
@@ -123,35 +125,6 @@ in
 		)
  	end
 
-	%%% Pour controller
-	fun {MapCheck State Pos}
-		case Pos
-		of pt(x:X y:Y) then
-			if {List.nth {List.nth State.map Y} X} == 0 then true
-			else falSse
-			end
-		end
-	end
-
-	fun {ListUpdate Lst Idx Val Acc}
-		case Lst
-		of nil then Acc
-		[] H|T then
-			if Idx == 0 then {ListUpdate nil Idx-1 Val {List.append {List.reverse Val|Acc} T}}
-			elseif Idx > 0 then {ListUpdate T Idx-1 Val H|Acc}
-			end
-		end
-	end
-
-	fun {MapUpdate Map X Y Type Acc}
-		A B C in
-		A = {List.nth Map Y}
-		B = {ListUpdate A X+1 1 nil}
-		C = {ListUpdate Map Y+1 B nil}
-		C
-	end
-	%%%
-
 	fun {Move State ?ID ?Position}
 		ID = State.id
 		%first up if not, right if not, down, if not left
@@ -162,92 +135,76 @@ in
 			M = {OS.rand} mod 4
 			case M
 			of 3 then
-				if Y+1 < Input.nRow andthen 
-					{MapCheck State pt(x:X y:Y+1)} == true
+				if Y+1 < Input.nRow  
 					then 
 					Position = pt(x:X y:Y+1)
 
-				elseif Y-1 > 0 andthen 
-					{MapCheck State pt(x:X y:Y-1)} == true
+				elseif Y-1 > 0  
 					then 
 					Position = pt(x:X y:Y-1)
 
-				elseif X-1 > 0 andthen 
-					{MapCheck State pt(x:X-1 y:Y)} == true
+				elseif X-1 > 0  
 					then 
 					Position = pt(x:X-1 y:Y)
 
-				elseif X+1 < Input.nColumn andthen 
-					{MapCheck State pt(x:X+1 y:Y)} == true
+				elseif X+1 < Input.nColumn  
 					then 
 					Position = pt(x:X+1 y:Y)
 				else Position = State.position
 				end
 
 			[] 2 then 
-				if Y-1 > 0 andthen 
-					{MapCheck State pt(x:X y:Y-1)} == true
+				if Y-1 > 0  
 					then 
 					Position = pt(x:X y:Y-1)
 
-				elseif X-1 > 0 andthen 
-					{MapCheck State pt(x:X-1 y:Y)} == true
+				elseif X-1 > 0  
 					then 
 					Position = pt(x:X-1 y:Y)
 
-				elseif X+1 < Input.nColumn andthen 
-					{MapCheck State pt(x:X+1 y:Y)} == true
+				elseif X+1 < Input.nColumn  
 					then 
 					Position = pt(x:X+1 y:Y)
 
-				elseif Y+1 < Input.nRow andthen 
-					{MapCheck State pt(x:X y:Y+1)} == true
+				elseif Y+1 < Input.nRow  
 					then 
 					Position = pt(x:X y:Y+1)
 				else Position = State.position
 				end
 
 			[] 1 then
-				if X-1 > 0 andthen 
-					{MapCheck State pt(x:X-1 y:Y)} == true
+				if X-1 > 0  
 					then 
 					Position = pt(x:X-1 y:Y)
 
-				elseif X+1 < Input.nColumn andthen 
-					{MapCheck State pt(x:X+1 y:Y)} == true
+				elseif X+1 < Input.nColumn  
 					then 
 					Position = pt(x:X+1 y:Y)
 
-				elseif Y+1 < Input.nRow andthen 
-					{MapCheck State pt(x:X y:Y+1)} == true
+				elseif Y+1 < Input.nRow  
 					then 
 					Position = pt(x:X y:Y+1)
 
-				elseif Y-1 > 0 andthen 
-					{MapCheck State pt(x:X y:Y-1)} == true
+				elseif Y-1 > 0  
 					then 
 					Position = pt(x:X y:Y-1)
 				else Position = State.position
 				end
 
 			[] 0 then
-				if X+1 < Input.nColumn andthen 
-					{MapCheck State pt(x:X+1 y:Y)} == true
+				if X+1 < Input.nColumn  
 					then 
 					Position = pt(x:X+1 y:Y)
 
-				elseif Y+1 < Input.nRow andthen 
-					{MapCheck State pt(x:X y:Y+1)} == true
+				elseif Y+1 < Input.nRow  
 					then 
 					Position = pt(x:X y:Y+1)
 
-				elseif Y-1 > 0 andthen 
-					{MapCheck State pt(x:X y:Y-1)} == true
+				elseif Y-1 > 0  
 					then 
 					Position = pt(x:X y:Y-1)
 
-				elseif X-1 > 0 andthen 
-					{MapCheck State pt(x:X-1 y:Y)} == true
+				elseif X-1 > 0  
 					then 
 					Position = pt(x:X-1 y:Y)
 				else Position = State.position
@@ -255,20 +212,19 @@ in
 
 			end
 		end
-
-		{StateUpdate State.id Position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition}
-
+		State
 	end
 
 	fun {SayMoved State ID Position}
 		if ID == State.id then
 		{StateUpdate State.id Position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition}
-		else
-			State
 		end
 	end
 
 	fun {SayMineExplode State Mine}
+		if State.position.x == Mine.x andthen State.position.y == Mine.y then
+			{System.show exlposion}
+		end
 		State
 	end
 
@@ -290,14 +246,24 @@ in
 		State
 	end
 
+	fun {Abs X}
+		if X < 0 then ~x
+		else X
+		end
+	end
+
+	fun{ManhattanDistance Pos1 Pos2}
+    	{Abs Pos1.x - Pos2.x} + {Abs Pos1.y - Pos2.y}
+  	end
+
 	%Shoot as soon the player have ammo, if not then mine if not then nothing
 	fun {FireItem State ?ID ?Kind}
 		ID = State.id
 		Kind = null
 		if State.gunReloads > 0 then
-			Kind = gun
+			Kind = gun()
 		elseif State.mineReloads > 0 then
-			Kind = mine
+			Kind = mine()
 		end
 		State
 	end
@@ -319,11 +285,10 @@ in
     end
 
 		%always take the flag
-	fun {TakeFlag State ?ID ?Flag Color}
+	fun {TakeFlag State ?ID ?Flag}
 		ID = State.id
-		Flag = flag(pos:State.position color:Color)
-		{StateUpdate State.id State.position State.map State.hp Flag State.mineReloads State.gunReloads State.startPosition}
-
+		Flag = flag(pos:State.position color:State.id.color)
+		State
 	end
 			
 	%drop when at his spawnpoint
@@ -332,14 +297,18 @@ in
 		if State.position == {List.nth Input.spawnPoints ID} then
 			Flag = null
 		end
-		{StateUpdate State.id State.position State.map State.hp Flag State.mineReloads State.gunReloads State.startPosition}
+		State
 	end
 
 	fun {SayFlagTaken State ID Flag}
-		State
+		if State.id == ID then {StateUpdate State.id State.position State.map State.hp Flag State.mineReloads State.gunReloads State.startPosition}
+		else State
+		end
 	end
 
 	fun {SayFlagDropped State ID Flag}
-		State
+		if State.id == ID then {StateUpdate State.id State.position State.map State.hp Flag State.mineReloads State.gunReloads State.startPosition}
+		else State
+		end	
 	end
 end
