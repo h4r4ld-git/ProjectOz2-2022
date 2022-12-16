@@ -45,7 +45,6 @@ in
 			{Send Port respawn()}
 		else
 			{Send Port move(ID Position)}
-			if 
 			{Send WindowPort moveSoldier(ID Position)}
 		end
 
