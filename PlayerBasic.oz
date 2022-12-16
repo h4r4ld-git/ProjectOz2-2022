@@ -263,6 +263,8 @@ in
 	fun {SayMoved State ID Position}
 		if ID == State.id then
 		{StateUpdate State.id Position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition}
+		else
+			State
 		end
 	end
 

@@ -13,7 +13,7 @@ define
 	SimulatedThinking
 	Main
 	WindowPort
-	CheckMove
+	GetPoint
 	ChangeState
 	ListUpdate
 	MapUpdate
@@ -47,19 +47,22 @@ in
 		NewFlags
 		NewMap
 		NewPlayer
+		NewValue
+		LastValue
 	in
 		{Send Port isDead(Dead)}
 		if Dead == true then 
 			{Delay respawnDelay}
 			{Send Port respawn()}
 		end
-		
 		{Send Port move(ID Position)}
-		ValidMove = {CheckMove State.map Position.x Position.y} andthen (((State.player.x - Position.x) < ~1) orelse ((State.player.x - Position.x) > 1) orelse ((State.player.y - Position.y) < ~1) orelse ((State.player.y - Position.y) > 1))
+		LastValue = {GetPoint State.map State.player.x State.player.y} 
+		NewValue = {GetPoint State.map Position.x Position.y}
+		ValidMove = (NewValue == 0) andthen (((State.player.x - Position.x) < ~1) orelse ((State.player.x - Position.x) > 1) orelse ((State.player.y - Position.y) < ~1) orelse ((State.player.y - Position.y) > 1))
 		if ValidMove then
 			{SendToAll sayMoved(ID Position)}
 			{Send WindowPort moveSoldier(ID Position)}
-			NewMap = {MapUpdate State.map State.player Position}
+			NewMap = {MapUpdate {MapUpdate State.map State.player.x State.player.y 0} Position.x Position.y LastValue}
 			NewPlayer = Position
 		else
 			NewMap = State.map
@@ -69,13 +72,14 @@ in
 		NewMines = State.mines
 		NewFlags = State.flags
 
-		
+		% {System.show NewMap}
 		% {System.show endOfLoop(ID)}
+		% {Delay 10000}
 		{SimulatedThinking}
 		{Main Port ID state(mines:NewMines flags:NewFlags map:NewMap player:NewPlayer)}
 	end
 
-	fun {CheckMove Map X Y}
+	fun {GetPoint Map X Y}
 		fun {CheckRow Row Index}
 			case Row of nil then ~1
 			[] H|T then
@@ -90,9 +94,9 @@ in
 		case Map of nil then false
 		[] H|T then
 			if X == 0 then
-				{CheckRow H Y} == 0
+				{CheckRow H Y}
 			else
-				{CheckMove T X-1 Y}
+				{GetPoint T X-1 Y}
 			end
 		end
 	end
@@ -107,10 +111,10 @@ in
 		end
 	end
 
-	fun {MapUpdate Map X Y}
+	fun {MapUpdate Map X Y Val}
 		A B C in
 		A = {List.nth Map Y}
-		B = {ListUpdate A X+1 1 nil}
+		B = {ListUpdate A X+1 Val nil}
 		C = {ListUpdate Map Y+1 B nil}
 		C
 	end
