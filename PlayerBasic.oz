@@ -38,6 +38,7 @@ define
 	DropFlag
 
 	% Helper functions
+	StateUpdate
 	RandomInRange = fun {$ Min Max} Min+({OS.rand}mod(Max-Min+1)) end
 in
 	fun {StartPlayer Color ID}
@@ -89,12 +90,13 @@ in
 			[] dropFlag(?ID ?Flag) then {DropFlag State ID Flag}
 			[] sayFlagTaken(ID Flag) then {SayFlagTaken State ID Flag}
 			[] sayFlagDropped(ID Flag) then {SayFlagDropped State ID flag}
-			[] isDead(?Dead) then {IsDead State Dead}
+			[] isDead(?Dead) then {IsDead Dead State}
 			end
     end
 
 	%%%% TODO Message functions
-	fun {IsDead State ?Dead}
+
+	fun {IsDead ?Dead State}
 		if State.hp == 0 then
 			Dead = true
 		else
@@ -109,8 +111,34 @@ in
 		State
 	end
 
+	fun{StateUpdate Id Position Map Hp Flag MineReloads GunReloads StartPosition}
+		state(
+			id:Id
+			position:Position
+			map:Map
+			hp:Hp
+			flag:Flag
+			mineReloads:MineReloads
+			gunReloads:GunReloads
+			startPosition:StartPosition
+		)
+ 	end
+	
 	fun {Move State ?ID ?Position}
-		State	
+		ID = State.id
+		%first up if not, right if not, down, if not left
+		%SpawnPoints = [pt(x:1 y:1) pt(x:12 y:10) pt(x:1 y:2) pt(x:12 y:11) pt(x:1 y:3) pt(x:12 y:12)]
+		case State.position
+		of pt(x:X y:Y)then 
+				if Y+1 < 13 then Position = pt(x:X y:Y+1)
+				elseif X-1 > 0 then Position = pt(x:X-1 y:Y)
+				elseif Y-1 > 0 then Position = pt(x:X y:Y-1)
+				elseif X+1 < 13 then Position = pt(x:X+1 y:Y)
+
+				end
+		end
+		
+		{StateUpdate State.id Position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition}
 	end
 
 	fun {SayMoved State ID Position}
