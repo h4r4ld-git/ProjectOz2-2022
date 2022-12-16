@@ -45,7 +45,7 @@ in
 			{Send Port respawn()}
 		end
 		
-		{System.show endOfLoop(ID)}
+		% {System.show endOfLoop(ID)}
 		{Delay 500}
 		{Main Port ID State}
 	end

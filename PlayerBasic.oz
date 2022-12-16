@@ -89,17 +89,18 @@ in
 			[] dropFlag(?ID ?Flag) then {DropFlag State ID Flag}
 			[] sayFlagTaken(ID Flag) then {SayFlagTaken State ID Flag}
 			[] sayFlagDropped(ID Flag) then {SayFlagDropped State ID flag}
-			[] isDead(?Dead) then {IsDead Dead State}
+			[] isDead(?Dead) then {IsDead State Dead}
 			end
     end
 
 	%%%% TODO Message functions
-	fun {IsDead ?Dead State}
+	fun {IsDead State ?Dead}
 		if State.hp == 0 then
 			Dead = true
 		else
 			Dead = false
 		end
+		State
 	end
 	
 	fun {InitPosition State ?ID ?Position}
