@@ -36,14 +36,18 @@ in
 	proc {Main Port ID State}
 		% {System.show startOfLoop(ID)}
 
-		%%%% TODO Insert your code here
-		 
-		Dead in
+		Dead
+		Position
+	in
 		{Send Port isDead(Dead)}
 		if Dead == true then 
 			{Delay respawnDelay}
 			{Send Port respawn()}
+		else
+			{Send Port move(ID Position)}
 		end
+
+
 		
 		% {System.show endOfLoop(ID)}
 		{Delay 500}
