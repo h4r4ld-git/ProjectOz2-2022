@@ -37,8 +37,16 @@ in
 		{System.show startOfLoop(ID)}
 
 		%%%% TODO Insert your code here
-
+		 
+		Dead in
+		{Send Port isDead(Dead)}
+		if Dead == true then 
+			{Delay respawnDelay}
+			{Send Port respawn()}
+		end
+		
 		{System.show endOfLoop(ID)}
+		{Delay 500}
 		{Main Port ID State}
 	end
 
