@@ -87,7 +87,7 @@ in
 			[] sayShoot(ID Position) then {SayShoot State ID Position}
             [] sayDeath(ID) then {SayDeath State ID}
             [] sayDamageTaken(ID Damage LifeLeft) then {SayDamageTaken State ID Damage LifeLeft}
-			[] takeFlag(?ID ?Flag) then {TakeFlag State ID Flag}
+			[] takeFlag(?ID ?Flag Color) then {TakeFlag State ID Flag Color}
 			[] dropFlag(?ID ?Flag) then {DropFlag State ID Flag}
 			[] sayFlagTaken(ID Flag) then {SayFlagTaken State ID Flag}
 			[] sayFlagDropped(ID Flag) then {SayFlagDropped State ID flag}
@@ -127,10 +127,10 @@ in
 		%SpawnPoints = [pt(x:1 y:1) pt(x:12 y:10) pt(x:1 y:2) pt(x:12 y:11) pt(x:1 y:3) pt(x:12 y:12)]
 		case State.position
 		of pt(x:X y:Y)then 
-				if Y+1 < 13 then Position = pt(x:X y:Y+1)
+				if Y+1 < Input.nRow then Position = pt(x:X y:Y+1)
 				elseif X-1 > 0 then Position = pt(x:X-1 y:Y)
 				elseif Y-1 > 0 then Position = pt(x:X y:Y-1)
-				elseif X+1 < 13 then Position = pt(x:X+1 y:Y)
+				elseif X+1 < Input.mColumn then Position = pt(x:X+1 y:Y)
 
 				end
 		end
@@ -164,9 +164,15 @@ in
 		State
 	end
 
+	%Shoot as soon the player have ammo, if not then mine if not then nothing
 	fun {FireItem State ?ID ?Kind}
 		ID = State.id
 		Kind = null
+		if State.gunReloads > 0 then
+			Kind = gun
+		elseif State.mineReloads > 0 then
+			Kind = mine
+		end
 		State
 	end
 
@@ -186,16 +192,21 @@ in
 		State
     end
 
-	fun {TakeFlag State ?ID ?Flag}
+		%always take the flag
+	fun {TakeFlag State ?ID ?Flag Color}
 		ID = State.id
-		Flag = null
-		State
+		Flag = flag(pos:State.position color:Color)
+		{StateUpdate State.id State.position State.map State.hp Flag State.mineReloads State.gunReloads State.startPosition}
+
 	end
 			
+	%drop when at his spawnpoint
 	fun {DropFlag State ?ID ?Flag}
 		ID = State.id
-		Flag = null
-		State
+		if State.position == {List.nth Input.spawnPoints ID} then
+			Flag = null
+		end
+		{StateUpdate State.id State.position State.map State.hp Flag State.mineReloads State.gunReloads State.startPosition}
 	end
 
 	fun {SayFlagTaken State ID Flag}
