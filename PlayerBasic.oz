@@ -100,11 +100,7 @@ in
 	%%%% TODO Message functions
 
 	fun {IsDead ?Dead State}
-		if State.hp == 0 then
-			Dead = true
-		else
-			Dead = false
-		end
+		Dead = State.hp == 0
 		State
 	end
 	
