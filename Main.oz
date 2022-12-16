@@ -34,11 +34,12 @@ in
 	SimulatedThinking = proc{$} {Delay ({OS.rand} mod (Input.thinkMax - Input.thinkMin) + Input.thinkMin)} end
 
 	proc {Main Port ID State}
-		{System.show startOfLoop(ID)}
+		% {System.show startOfLoop(ID)}
 
 		%%%% TODO Insert your code here
 
-		{System.show endOfLoop(ID)}
+		% {System.show endOfLoop(ID)}
+		{Delay 500}
 		{Main Port ID State}
 	end
 
