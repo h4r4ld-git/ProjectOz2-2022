@@ -39,6 +39,9 @@ define
 
 	% Helper functions
 	StateUpdate
+	MapCheck
+	ListUpdate
+	MapUpdate
 	RandomInRange = fun {$ Min Max} Min+({OS.rand}mod(Max-Min+1)) end
 in
 	fun {StartPlayer Color ID}
@@ -123,26 +126,148 @@ in
 			startPosition:StartPosition
 		)
  	end
-	
+
+	%%% Pour controller
+	fun {MapCheck State Pos}
+		case Pos
+		of pt(x:X y:Y) then
+			if {List.nth {List.nth State.map Y} X} == 0 then true
+			else falSse
+			end
+		end
+	end
+
+	fun {ListUpdate Lst Idx Val Acc}
+		case Lst
+		of nil then Acc
+		[] H|T then
+			if Idx == 0 then {ListUpdate nil Idx-1 Val {List.append {List.reverse Val|Acc} T}}
+			elseif Idx > 0 then {ListUpdate T Idx-1 Val H|Acc}
+			end
+		end
+	end
+
+	fun {MapUpdate Map X Y Type Acc}
+		A B C in
+		A = {List.nth Map Y}
+		B = {ListUpdate A X+1 1 nil}
+		C = {ListUpdate Map Y+1 B nil}
+		C
+	end
+	%%%
+
 	fun {Move State ?ID ?Position}
 		ID = State.id
 		%first up if not, right if not, down, if not left
 		%SpawnPoints = [pt(x:1 y:1) pt(x:12 y:10) pt(x:1 y:2) pt(x:12 y:11) pt(x:1 y:3) pt(x:12 y:12)]
 		case State.position
-		of pt(x:X y:Y)then 
-				if Y+1 < Input.nRow then Position = pt(x:X y:Y+1)
-				elseif X-1 > 0 then Position = pt(x:X-1 y:Y)
-				elseif Y-1 > 0 then Position = pt(x:X y:Y-1)
-				elseif X+1 < Input.mColumn then Position = pt(x:X+1 y:Y)
+		of pt(x:X y:Y)	then
+			M HasMoved in
+			M = {OS.rand} mod 4
+			case M
+			of 3 then
+				if Y+1 < Input.nRow andthen 
+					{MapCheck State pt(x:X y:Y+1)} == true
+					then 
+					Position = pt(x:X y:Y+1)
 
+				elseif Y-1 > 0 andthen 
+					{MapCheck State pt(x:X y:Y-1)} == true
+					then 
+					Position = pt(x:X y:Y-1)
+
+				elseif X-1 > 0 andthen 
+					{MapCheck State pt(x:X-1 y:Y)} == true
+					then 
+					Position = pt(x:X-1 y:Y)
+
+				elseif X+1 < Input.nColumn andthen 
+					{MapCheck State pt(x:X+1 y:Y)} == true
+					then 
+					Position = pt(x:X+1 y:Y)
+				else Position = State.position
 				end
+
+			[] 2 then 
+				if Y-1 > 0 andthen 
+					{MapCheck State pt(x:X y:Y-1)} == true
+					then 
+					Position = pt(x:X y:Y-1)
+
+				elseif X-1 > 0 andthen 
+					{MapCheck State pt(x:X-1 y:Y)} == true
+					then 
+					Position = pt(x:X-1 y:Y)
+
+				elseif X+1 < Input.nColumn andthen 
+					{MapCheck State pt(x:X+1 y:Y)} == true
+					then 
+					Position = pt(x:X+1 y:Y)
+
+				elseif Y+1 < Input.nRow andthen 
+					{MapCheck State pt(x:X y:Y+1)} == true
+					then 
+					Position = pt(x:X y:Y+1)
+				else Position = State.position
+				end
+
+			[] 1 then
+				if X-1 > 0 andthen 
+					{MapCheck State pt(x:X-1 y:Y)} == true
+					then 
+					Position = pt(x:X-1 y:Y)
+
+				elseif X+1 < Input.nColumn andthen 
+					{MapCheck State pt(x:X+1 y:Y)} == true
+					then 
+					Position = pt(x:X+1 y:Y)
+
+				elseif Y+1 < Input.nRow andthen 
+					{MapCheck State pt(x:X y:Y+1)} == true
+					then 
+					Position = pt(x:X y:Y+1)
+
+				elseif Y-1 > 0 andthen 
+					{MapCheck State pt(x:X y:Y-1)} == true
+					then 
+					Position = pt(x:X y:Y-1)
+				else Position = State.position
+				end
+
+			[] 0 then
+				if X+1 < Input.nColumn andthen 
+					{MapCheck State pt(x:X+1 y:Y)} == true
+					then 
+					Position = pt(x:X+1 y:Y)
+
+				elseif Y+1 < Input.nRow andthen 
+					{MapCheck State pt(x:X y:Y+1)} == true
+					then 
+					Position = pt(x:X y:Y+1)
+
+				elseif Y-1 > 0 andthen 
+					{MapCheck State pt(x:X y:Y-1)} == true
+					then 
+					Position = pt(x:X y:Y-1)
+
+				elseif X-1 > 0 andthen 
+					{MapCheck State pt(x:X-1 y:Y)} == true
+					then 
+					Position = pt(x:X-1 y:Y)
+				else Position = State.position
+				end
+
+			end
 		end
-		
+
 		{StateUpdate State.id Position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition}
+
 	end
 
 	fun {SayMoved State ID Position}
-		State
+		if ID == State.id then
+		{StateUpdate State.id Position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition}
+		end
 	end
 
 	fun {SayMineExplode State Mine}
