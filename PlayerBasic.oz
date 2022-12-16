@@ -58,6 +58,7 @@ in
 					mineReloads:0
 					gunReloads:0
 					startPosition:{List.nth Input.spawnPoints ID}
+					moves:[mv(dx:1 dy:-1) mv(dx:1 dy:1) mv(dx:1 dy:0)]
 					% TODO You can add more elements if you need it
 				)
 			}
@@ -97,11 +98,7 @@ in
 	%%%% TODO Message functions
 
 	fun {IsDead ?Dead State}
-		if State.hp == 0 then
-			Dead = true
-		else
-			Dead = false
-		end
+		Dead = State.hp == 0
 		State
 	end
 	
