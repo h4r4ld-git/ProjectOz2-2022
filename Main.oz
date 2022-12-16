@@ -13,6 +13,8 @@ define
 	SimulatedThinking
 	Main
 	WindowPort
+	CheckMove
+	ChangeState
 
 	proc {DrawFlags Flags Port}
 		case Flags of nil then skip 
@@ -38,6 +40,11 @@ in
 
 		Dead
 		Position
+		ValidMove
+		NewMines
+		NewFlags
+		NewMap
+		NewPlayer
 	in
 		{Send Port isDead(Dead)}
 		if Dead == true then 
@@ -45,14 +52,42 @@ in
 			{Send Port respawn()}
 		else
 			{Send Port move(ID Position)}
-			{Send WindowPort moveSoldier(ID Position)}
+			{CheckMove State.map Position ValidMove}
+			if ValidMove then
+				if (State.player.x - Position.x) < -1 or (State.player.x - Position.x) > 1 or (State.player.y - Position.y) < -1 or (State.player.y - Position.y) > 1 then
+					{SendToAll SayMoved(ID Position)}
+					{Send WindowPort moveSoldier(ID Position)}
+				end
+			end
 		end
 
 
 		
 		% {System.show endOfLoop(ID)}
-		{Delay 500}
-		{Main Port ID State}
+		{SimulatedThinking}
+		{Main Port ID state(mines:NewMines flags:NewFlags map:NewMap player:NewPlayer)}
+	end
+
+	proc {CheckMove Map Position ?Valid}
+		fun {CheckRow Row Index}
+			case Row of nil then -1
+			[] H|T then
+				if Index == 0 then
+					H
+				end
+			end
+		end
+	in
+		case Map of nil then -1
+		[] H|T then
+			if Position.x == 0 then
+				Valid = {CheckRow H Position.y} == 0
+			end
+		end
+	end
+
+	proc {SendToAll Msg}
+		{ForAll PlayersPorts proc {$ P} {Send P Msg} end}
 	end
 
 	proc {InitThreadForAll Players}
@@ -65,7 +100,7 @@ in
 			{Send WindowPort initSoldier(ID Position)}
 			{Send WindowPort lifeUpdate(ID Input.startHealth)}
 			thread
-			 	{Main Port ID state(mines:nil flags:Input.flags)}
+			 	{Main Port ID state(mines:nil flags:Input.flags map:Input.Map player:Position)}
 			end
 			{InitThreadForAll Next}
 		end
