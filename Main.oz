@@ -15,6 +15,8 @@ define
 	WindowPort
 	CheckMove
 	ChangeState
+	ListUpdate
+	MapUpdate
 
 	proc {DrawFlags Flags Port}
 		case Flags of nil then skip 
@@ -50,17 +52,22 @@ in
 		if Dead == true then 
 			{Delay respawnDelay}
 			{Send Port respawn()}
-		else
-			{Send Port move(ID Position)}
-			{CheckMove State.map Position ValidMove}
-			if ValidMove then
-				if (State.player.x - Position.x) < -1 or (State.player.x - Position.x) > 1 or (State.player.y - Position.y) < -1 or (State.player.y - Position.y) > 1 then
-					{SendToAll SayMoved(ID Position)}
-					{Send WindowPort moveSoldier(ID Position)}
-				end
-			end
 		end
-
+		
+		{Send Port move(ID Position)}
+		ValidMove = {CheckMove State.map Position.x Position.y} andthen (((State.player.x - Position.x) < ~1) orelse ((State.player.x - Position.x) > 1) orelse ((State.player.y - Position.y) < ~1) orelse ((State.player.y - Position.y) > 1))
+		if ValidMove then
+			{SendToAll sayMoved(ID Position)}
+			{Send WindowPort moveSoldier(ID Position)}
+			NewMap = {MapUpdate State.map State.player Position}
+			NewPlayer = Position
+		else
+			NewMap = State.map
+			NewPlayer = State.player
+		end
+		
+		NewMines = State.mines
+		NewFlags = State.flags
 
 		
 		% {System.show endOfLoop(ID)}
@@ -68,26 +75,48 @@ in
 		{Main Port ID state(mines:NewMines flags:NewFlags map:NewMap player:NewPlayer)}
 	end
 
-	proc {CheckMove Map Position ?Valid}
+	fun {CheckMove Map X Y}
 		fun {CheckRow Row Index}
-			case Row of nil then -1
+			case Row of nil then ~1
 			[] H|T then
 				if Index == 0 then
 					H
+				else
+					{CheckRow T Index-1}
 				end
 			end
 		end
 	in
-		case Map of nil then -1
+		case Map of nil then false
 		[] H|T then
-			if Position.x == 0 then
-				Valid = {CheckRow H Position.y} == 0
+			if X == 0 then
+				{CheckRow H Y} == 0
+			else
+				{CheckMove T X-1 Y}
 			end
 		end
 	end
 
+	fun {ListUpdate Lst Idx Val Acc}
+		case Lst
+		of nil then Acc
+		[] H|T then
+			if Idx == 0 then {ListUpdate nil Idx-1 Val {List.append {List.reverse Val|Acc} T}}
+			elseif Idx > 0 then {ListUpdate T Idx-1 Val H|Acc}
+			end
+		end
+	end
+
+	fun {MapUpdate Map X Y}
+		A B C in
+		A = {List.nth Map Y}
+		B = {ListUpdate A X+1 1 nil}
+		C = {ListUpdate Map Y+1 B nil}
+		C
+	end
+
 	proc {SendToAll Msg}
-		{ForAll PlayersPorts proc {$ P} {Send P Msg} end}
+		{ForAll PlayersPorts proc {$ P} {Send P.2 Msg} end}
 	end
 
 	proc {InitThreadForAll Players}
@@ -100,7 +129,7 @@ in
 			{Send WindowPort initSoldier(ID Position)}
 			{Send WindowPort lifeUpdate(ID Input.startHealth)}
 			thread
-			 	{Main Port ID state(mines:nil flags:Input.flags map:Input.Map player:Position)}
+			 	{Main Port ID state(mines:nil flags:Input.flags map:Input.map player:Position)}
 			end
 			{InitThreadForAll Next}
 		end
