@@ -14,9 +14,8 @@ define
 	Main
 	WindowPort
 	GetPoint
-	ChangeState
-	ListUpdate
-	MapUpdate
+	StatesActiveObject
+	ControllerMemory
 
 	proc {DrawFlags Flags Port}
 		case Flags of nil then skip 
@@ -26,6 +25,36 @@ define
 		end
 	end
 in
+
+	fun {StatesActiveObject F Init}
+		P S in 
+			P = {NewPort S}
+			thread _={FoldL S F Init} end
+			proc {$ X} {Send P X} end
+	end
+
+	ControllerMemory = {StatesActiveObject 
+		fun {$ States Msg}
+			fun {UpdateState States ID NewState}
+				case States of nil then
+					[player(id:ID state:NewState)]
+				[] H|T then
+					if H.id == ID then
+						player(id:ID state:NewState)|T
+					else
+						H|{UpdateState T ID NewState}
+					end
+				end
+			end
+		in
+			case Msg of get(?Mem) then
+				Mem = States
+			[] update(State ID) then
+				{UpdateState States ID State}
+			end
+		end
+		nil}
+
     fun {DoListPlayer Players Colors ID}
 		case Players#Colors
 		of nil#nil then nil
@@ -45,10 +74,9 @@ in
 		ValidMove
 		NewMines
 		NewFlags
-		NewMap
 		NewPlayer
 		NewValue
-		LastValue
+		BaseValue
 	in
 		{Send Port isDead(Dead)}
 		if Dead == true then 
@@ -56,16 +84,14 @@ in
 			{Send Port respawn()}
 		end
 		{Send Port move(ID Position)}
-		LastValue = {GetPoint State.map State.player.x State.player.y} 
+		BaseValue = {GetPoint State.map State.basePosition.x State.basePosition.y} 
 		NewValue = {GetPoint State.map Position.x Position.y}
-		ValidMove = (NewValue == 0) andthen (((State.player.x - Position.x) < ~1) orelse ((State.player.x - Position.x) > 1) orelse ((State.player.y - Position.y) < ~1) orelse ((State.player.y - Position.y) > 1))
+		ValidMove = (NewValue == 0 orelse NewValue == BaseValue) andthen (((State.player.x - Position.x) < ~1) orelse ((State.player.x - Position.x) > 1) orelse ((State.player.y - Position.y) < ~1) orelse ((State.player.y - Position.y) > 1))
 		if ValidMove then
 			{SendToAll sayMoved(ID Position)}
 			{Send WindowPort moveSoldier(ID Position)}
-			NewMap = {MapUpdate {MapUpdate State.map State.player.x State.player.y 0} Position.x Position.y LastValue}
 			NewPlayer = Position
 		else
-			NewMap = State.map
 			NewPlayer = State.player
 		end
 		
@@ -76,7 +102,7 @@ in
 		% {System.show endOfLoop(ID)}
 		% {Delay 10000}
 		{SimulatedThinking}
-		{Main Port ID state(mines:NewMines flags:NewFlags map:NewMap player:NewPlayer)}
+		{Main Port ID state(mines:NewMines flags:NewFlags map:State.map player:NewPlayer basePosition:State.basePosition)}
 	end
 
 	fun {GetPoint Map X Y}
@@ -101,24 +127,6 @@ in
 		end
 	end
 
-	fun {ListUpdate Lst Idx Val Acc}
-		case Lst
-		of nil then Acc
-		[] H|T then
-			if Idx == 0 then {ListUpdate nil Idx-1 Val {List.append {List.reverse Val|Acc} T}}
-			elseif Idx > 0 then {ListUpdate T Idx-1 Val H|Acc}
-			end
-		end
-	end
-
-	fun {MapUpdate Map X Y Val}
-		A B C in
-		A = {List.nth Map Y}
-		B = {ListUpdate A X+1 Val nil}
-		C = {ListUpdate Map Y+1 B nil}
-		C
-	end
-
 	proc {SendToAll Msg}
 		{ForAll PlayersPorts proc {$ P} {Send P.2 Msg} end}
 	end
@@ -133,7 +141,10 @@ in
 			{Send WindowPort initSoldier(ID Position)}
 			{Send WindowPort lifeUpdate(ID Input.startHealth)}
 			thread
-			 	{Main Port ID state(mines:nil flags:Input.flags map:Input.map player:Position)}
+				State = state(mines:nil flags:Input.flags map:Input.map player:Position basePosition:Position)
+			in
+				{ControllerMemory update(State ID)}
+			 	{Main Port ID State}
 			end
 			{InitThreadForAll Next}
 		end
