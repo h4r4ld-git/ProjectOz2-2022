@@ -14,7 +14,7 @@ define
 	Main
 	WindowPort
 	GetPoint
-	StatesActiveObject
+	StatePortObject
 	ControllerMemory
 
 	proc {DrawFlags Flags Port}
@@ -26,14 +26,14 @@ define
 	end
 in
 
-	fun {StatesActiveObject F Init}
-		P S in 
-			P = {NewPort S}
-			thread _={FoldL S F Init} end
-			proc {$ X} {Send P X} end
+	fun {StatePortObject F Init}
+		P S O 
+	in
+		thread {NewPort S P} {FoldL S F Init O} end
+		proc {$ X} {Send P X} end
 	end
 
-	ControllerMemory = {StatesActiveObject 
+	ControllerMemory = {StatePortObject 
 		fun {$ States Msg}
 			fun {UpdateState States ID NewState}
 				case States of nil then
@@ -46,11 +46,26 @@ in
 					end
 				end
 			end
+
+			fun {GetID States ID}
+				case States of nil then nil
+				[] H|T then
+					if H.id == ID then
+						H.state
+					else
+						{GetID T ID}
+					end
+				end
+			end
 		in
-			case Msg of get(?Mem) then
+			case Msg of get(Mem) then
 				Mem = States
+				States
+			[] getID(State ID) then
+				State = {GetID States ID.id}
+				States
 			[] update(State ID) then
-				{UpdateState States ID State}
+				{UpdateState States ID.id State}
 			end
 		end
 		nil}
@@ -77,7 +92,9 @@ in
 		NewPlayer
 		NewValue
 		BaseValue
+		PlayersState
 	in
+		
 		{Send Port isDead(Dead)}
 		if Dead == true then 
 			{Delay respawnDelay}
@@ -142,8 +159,11 @@ in
 			{Send WindowPort lifeUpdate(ID Input.startHealth)}
 			thread
 				State = state(mines:nil flags:Input.flags map:Input.map player:Position basePosition:Position)
+				PlayersState
 			in
 				{ControllerMemory update(State ID)}
+				{ControllerMemory getID(PlayersState ID)}
+				{System.show PlayersState.player}
 			 	{Main Port ID State}
 			end
 			{InitThreadForAll Next}
