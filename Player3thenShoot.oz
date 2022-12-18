@@ -269,8 +269,7 @@ in
 	fun {SayCharge State ID Kind}
 		if State.id == ID then
 			case Kind
-			of nil then State
-			[] mine(x:X1 y:Y1) then
+			of mine(x:X1 y:Y1) then
 				{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads+1 State.gunReloads State.startPosition State.counter}
 			[] gun(x:X2 y:Y2) then
 				{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads State.gunReloads+1 State.startPosition State.counter}
@@ -313,36 +312,38 @@ in
 		C
 	end
 
-	fun {NearbyGun Pos Map}
-		for X in [pt(x: Pos.x+1 y: Pos.y) pt(x: Pos.x-1 y: Pos.y) pt(x: Pos.x y: Pos.y+1) pt(x: Pos.x y: Pos.y-1) pt(x: Pos.x y: Pos.y-2) pt(x: Pos.x y: Pos.y+2) pt(x: Pos.x+2 y: Pos.y) pt(x: Pos.x-2 y: Pos.y)] do
-			if {List.nth {List.nth Map X.y} X.x} == e then
-				X
-			end
-		end
-		0
-	end
+	%fun {NearbyGun Pos Map}
+	%	for X in [pt(x: Pos.x+1 y: Pos.y) pt(x: Pos.x-1 y: Pos.y) pt(x: Pos.x y: Pos.y+1) pt(x: Pos.x y: Pos.y-1) pt(x: Pos.x y: Pos.y-2) pt(x: Pos.x y: Pos.y+2) pt(x: Pos.x+2 y: Pos.y) pt(x: Pos.x-2 y: Pos.y)] do
+	%		if {List.nth {List.nth Map X.y} X.x} == e then
+	%			if X.x =< nColumn andthen X.y =< nRow  andthen X.x>0 andthen X.y>0 then
+	%				X
+	%			end
+	%		end
+	%	end
+	%	0
+	%end
 
 	%Shoot If someone is nearby
 	fun {FireItem State ?ID ?Kind}
-		ID = State.id
-        if State.counter == 3 then
-            if State.gunReloads > 0 then
-                C in
-                C = {NearbyGun State.position State.map}
-                if C \= 0 then
-                    Kind = gun(C)
-                end
-            elseif State.mineReloads > 0 then
-                Kind = mine(State.position)
-            end
-            {StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition 0}
-        end
+	%	ID = State.id
+    %   if State.counter == 3 then
+    %        if State.gunReloads > 0 then
+    %           C in
+    %            C = {NearbyGun State.position State.map}
+    %           if C \= 0 then
+    %                Kind = gun(C)
+    %            end
+    %        elseif State.mineReloads > 0 then
+    %            Kind = mine(State.position)
+    %        end
+    %        {StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition 0}
+    %    end
 		State
 	end
 
 	fun {SayMinePlaced State ID Mine}
-		if State.position.x == Food.x andthen State.position.y == Food.y then
-			{StateUpdate State.id State.position {MapUpdate State.map Food.x Food.y m nil} State.hp State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
+		if State.position.x == Mine.x andthen State.position.y == Mine.y then
+			{StateUpdate State.id State.position {MapUpdate State.map Mine.x Mine.y m nil} State.hp State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
 		end
 		State
 	end
@@ -359,13 +360,13 @@ in
 	end
 
 	fun {SayDamageTaken State ID Damage LifeLeft}
-		if State.position.x == Food.x andthen State.position.y == Food.y then
-			{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
+		if State.id ==ID then
+			{StateUpdate State.id State.position State.map State.hp-Damage State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
 		end
 		State
     end
 
-		%always take the flag
+	%always take the flag
 	fun {TakeFlag State ?ID ?Flag}
 		ID = State.id
 		Flag = flag(pos:State.position color:State.id.color)
