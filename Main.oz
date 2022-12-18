@@ -123,8 +123,6 @@ in
 
 		{Send Port move(ID Position)}
 		{ControllerMemory validMove(NoPlayer Position)}
-		{System.show pos1(Position.x Position.y)}
-		{System.show pos2(State.player.x State.player.y)}
 		if NoPlayer then
 			BaseValue = {GetPoint State.map State.basePosition.x-1 State.basePosition.y-1} 
 			NewValue = {GetPoint State.map Position.x-1 Position.y-1}
