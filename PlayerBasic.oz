@@ -223,7 +223,7 @@ in
 
 	fun {SayMineExplode State Mine}
 		if State.position.x == Mine.x andthen State.position.y == Mine.y then
-			{System.show exlposion}
+			State.hp = State.hp - 2
 		end
 		State
 	end
@@ -243,6 +243,15 @@ in
 	end
 
 	fun {SayCharge State ID Kind}
+		if State.id == ID then
+			case Kind
+			of nil then State
+			[] mine(x:X1 y:Y1) then
+				{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads+1 State.gunReloads State.startPosition}
+			[] gun(x:X2 y:Y2) then
+				{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads State.gunReloads+1 State.startPosition}
+			end
+		end
 		State
 	end
 

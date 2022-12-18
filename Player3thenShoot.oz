@@ -241,16 +241,22 @@ in
 
 	fun {SayMineExplode State Mine}
 		if State.position.x == Mine.x andthen State.position.y == Mine.y then
-			{System.show exlposion}
+			{StateUpdate State.id State.position State.map State.hp-2 State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
 		end
 		State
 	end
 
 	fun {SayFoodAppeared State Food}
+		if State.position.x == Food.x andthen State.position.y == Food.y then
+			{StateUpdate State.id State.position {MapUpdate State.map Food.x Food.y f nil} State.hp State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
+		end
 		State
 	end
 
 	fun {SayFoodEaten State ID Food}
+		if State.position.x == Food.x andthen State.position.y == Food.y then
+			{StateUpdate State.id State.position State.map State.hp+1 State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
+		end
 		State
 	end
 
@@ -261,6 +267,15 @@ in
 	end
 
 	fun {SayCharge State ID Kind}
+		if State.id == ID then
+			case Kind
+			of nil then State
+			[] mine(x:X1 y:Y1) then
+				{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads+1 State.gunReloads State.startPosition State.counter}
+			[] gun(x:X2 y:Y2) then
+				{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads State.gunReloads+1 State.startPosition State.counter}
+			end
+		end
 		State
 	end
 
@@ -326,10 +341,16 @@ in
 	end
 
 	fun {SayMinePlaced State ID Mine}
+		if State.position.x == Food.x andthen State.position.y == Food.y then
+			{StateUpdate State.id State.position {MapUpdate State.map Food.x Food.y m nil} State.hp State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
+		end
 		State
 	end
 
 	fun {SayShoot State ID Position}
+		if State.position.x == Position.x andthen State.position.y == Position.y then
+			{StateUpdate State.id State.position State.map State.hp-1 State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
+		end
 		State
 	end
 
@@ -338,6 +359,9 @@ in
 	end
 
 	fun {SayDamageTaken State ID Damage LifeLeft}
+		if State.position.x == Food.x andthen State.position.y == Food.y then
+			{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition State.counter}
+		end
 		State
     end
 
