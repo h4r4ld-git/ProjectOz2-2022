@@ -45,6 +45,7 @@ define
 	Abs
 	ManhattanDistance
 	RandChoice
+	Respawn
 	RandomInRange = fun {$ Min Max} Min+({OS.rand}mod(Max-Min+1)) end
 in
 	fun {StartPlayer Color ID}
@@ -222,15 +223,17 @@ in
 	fun {SayMoved State ID Position}
 		if ID == State.id then
 		{StateUpdate State.id Position State.map State.hp State.flag State.mineReloads State.gunReloads State.startPosition}
-		else State
+		else 
+			State
 		end
 	end
 
 	fun {SayMineExplode State Mine}
 		if State.position.x == Mine.x andthen State.position.y == Mine.y then
-			State.hp = State.hp - 2
+			{StateUpdate State.id State.position State.map State.hp-2 State.flag State.mineReloads State.gunReloads State.startPosition}
+		else 
+			State
 		end
-		State
 	end
 
 	fun {SayFoodAppeared State Food}
@@ -238,26 +241,34 @@ in
 	end
 
 	fun {SayFoodEaten State ID Food}
-		State
+		if State.position.x == Food.x andthen State.position.y == Food.y then
+			{StateUpdate State.id State.position State.map State.hp+1 State.flag State.mineReloads State.gunReloads State.startPosition}
+		else 
+			State
+		end
 	end
 
 	fun {ChargeItem State ?ID ?Kind} 
 		ID = State.id
-		Kind = null
+		if State.gunReloads == 0 then
+			Kind = gun()
+		else
+			Kind = mine()
+		end
 		State
 	end
 
 	fun {SayCharge State ID Kind}
 		if State.id == ID then
 			case Kind
-			of nil then State
-			[] mine(x:X1 y:Y1) then
+			of mine() then
 				{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads+1 State.gunReloads State.startPosition}
-			[] gun(x:X2 y:Y2) then
+			[] gun() then
 				{StateUpdate State.id State.position State.map State.hp State.flag State.mineReloads State.gunReloads+1 State.startPosition}
 			end
+		else State
 		end
-		State
+		
 	end
 
 	fun {Abs X}
@@ -284,11 +295,19 @@ in
 	end
 
 	fun {SayMinePlaced State ID Mine}
-		State
+		if State.position.x == Mine.x andthen State.position.y == Mine.y then
+			{StateUpdate State.id State.position {MapUpdate State.map Mine.x Mine.y m nil} State.hp State.flag State.mineReloads State.gunReloads State.startPosition}
+		else
+			State
+		end
 	end
 
 	fun {SayShoot State ID Position}
-		State
+		if State.position.x == Position.x andthen State.position.y == Position.y then
+			{StateUpdate State.id State.position State.map State.hp-1 State.flag State.mineReloads State.gunReloads State.startPosition}
+		else 
+			State
+		end
 	end
 
 	fun {SayDeath State ID}
@@ -296,10 +315,14 @@ in
 	end
 
 	fun {SayDamageTaken State ID Damage LifeLeft}
-		State
+		if State.id ==ID then
+			{StateUpdate State.id State.position State.map State.hp-Damage State.flag State.mineReloads State.gunReloads State.startPosition}
+		else 
+			State
+		end
     end
 
-		%always take the flag
+	%always take the flag
 	fun {TakeFlag State ?ID ?Flag}
 		ID = State.id
 		Flag = flag(pos:State.position color:State.id.color)
