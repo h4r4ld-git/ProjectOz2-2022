@@ -295,9 +295,7 @@ in
 	%drop when at his spawnpoint
 	fun {DropFlag State ?ID ?Flag}
 		ID = State.id
-		if State.position == {List.nth Input.spawnPoints ID} then
-			Flag = null
-		end
+		Flag = flag(pos:State.position color:State.id.color)
 		State
 	end
 
