@@ -57,15 +57,32 @@ in
 					end
 				end
 			end
+
+			fun {IsValid States Position}
+				case States of nil then true
+				[] H|T then
+					if H.state.player.x == Position.x andthen H.state.player.y == Position.y then
+						false
+					else
+						{IsValid T Position}
+					end
+				end
+			end
 		in
 			case Msg of get(Mem) then
 				Mem = States
 				States
-			[] getID(State ID) then
+			[] getIDState(State ID) then
 				State = {GetID States ID.id}
 				States
 			[] update(State ID) then
 				{UpdateState States ID.id State}
+			[] isDead(Dead ID) then
+				Dead = {GetID States ID.id}.hp == 0
+				States
+			[] validMove(Valid Position) then
+				Valid = {IsValid States Position}
+				States
 			end
 		end
 		nil}
@@ -91,35 +108,44 @@ in
 		NewFlags
 		NewPlayer
 		NewValue
+		NewHp
 		BaseValue
 		PlayersState
+		NoPlayer
 	in
-		
-		{Send Port isDead(Dead)}
+		{ControllerMemory isDead(Dead ID)}
 		if Dead == true then 
 			{Delay respawnDelay}
-			{Send Port respawn()}
+			NewHp = Input.startHealth
+			{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:State.player hp:NewHp basePosition:State.basePosition) ID)}
+			{Send Port respawn}
 		end
+
 		{Send Port move(ID Position)}
-		BaseValue = {GetPoint State.map State.basePosition.x State.basePosition.y} 
-		NewValue = {GetPoint State.map Position.x Position.y}
-		ValidMove = (NewValue == 0 orelse NewValue == BaseValue) andthen (((State.player.x - Position.x) < ~1) orelse ((State.player.x - Position.x) > 1) orelse ((State.player.y - Position.y) < ~1) orelse ((State.player.y - Position.y) > 1))
-		if ValidMove then
-			{SendToAll sayMoved(ID Position)}
-			{Send WindowPort moveSoldier(ID Position)}
-			NewPlayer = Position
+		{ControllerMemory validMove(NoPlayer Position)}
+		if NoPlayer then
+			BaseValue = {GetPoint State.map State.basePosition.x-1 State.basePosition.y-1} 
+			NewValue = {GetPoint State.map Position.x-1 Position.y-1}
+			ValidMove = (NewValue == 0 orelse NewValue == BaseValue) andthen (((State.player.x - Position.x) > ~2) andthen ((State.player.x - Position.x) < 2) andthen ((State.player.y - Position.y) > ~2) andthen ((State.player.y - Position.y) < 2))
+			if ValidMove then
+				{SendToAll sayMoved(ID Position)}
+				{Send WindowPort moveSoldier(ID Position)}
+				NewPlayer = Position
+				{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:NewPlayer hp:State.hp basePosition:State.basePosition) ID)}
+			else
+				NewPlayer = State.player
+			end
 		else
 			NewPlayer = State.player
 		end
 		
+
 		NewMines = State.mines
 		NewFlags = State.flags
 
-		% {System.show NewMap}
 		% {System.show endOfLoop(ID)}
-		% {Delay 10000}
 		{SimulatedThinking}
-		{Main Port ID state(mines:NewMines flags:NewFlags map:State.map player:NewPlayer basePosition:State.basePosition)}
+		{Main Port ID state(mines:NewMines flags:NewFlags map:State.map player:NewPlayer hp:State.hp basePosition:State.basePosition)}
 	end
 
 	fun {GetPoint Map X Y}
@@ -158,12 +184,9 @@ in
 			{Send WindowPort initSoldier(ID Position)}
 			{Send WindowPort lifeUpdate(ID Input.startHealth)}
 			thread
-				State = state(mines:nil flags:Input.flags map:Input.map player:Position basePosition:Position)
-				PlayersState
+				State = state(mines:nil flags:Input.flags map:Input.map player:Position hp:Input.startHealth basePosition:Position)
 			in
 				{ControllerMemory update(State ID)}
-				{ControllerMemory getID(PlayersState ID)}
-				{System.show PlayersState.player}
 			 	{Main Port ID State}
 			end
 			{InitThreadForAll Next}
