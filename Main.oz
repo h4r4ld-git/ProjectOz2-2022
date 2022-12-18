@@ -17,6 +17,8 @@ define
 	StatePortObject
 	ControllerMemory
 	WinControl
+	SpawnFood
+	RandomInRange = fun {$ Min Max} Min+({OS.rand}mod(Max-Min+1)) end
 
 	proc {DrawFlags Flags Port}
 		case Flags of nil then skip 
@@ -199,7 +201,7 @@ in
 			fun {AddFood States I J}
 				case States of nil then nil
 				[] H|T then
-					player(id:H.id state:state(mines:H.state.mines flags:H.state.mines map:H.state.map player:H.state.player hp:H.state.hp basePosition:H.state.basePosition mineCharge:H.state.mineCharge gunCharge:H.state.gunCharge hasFlag:H.state.hasFlag foods:food(pos:pt(x:I y:J))|H.state.foods))|{ChangeFlags T NewFlags}
+					player(id:H.id state:state(mines:H.state.mines flags:H.state.mines map:H.state.map player:H.state.player hp:H.state.hp basePosition:H.state.basePosition mineCharge:H.state.mineCharge gunCharge:H.state.gunCharge hasFlag:H.state.hasFlag foods:food(pos:pt(x:I y:J))|H.state.foods))|{AddFood T I J}
 				end
 			end
 		in
@@ -525,7 +527,7 @@ in
 	end
 
 	proc {SpawnFood Map}
-		fun {GeneratePos}
+		proc {GeneratePos}
 			I = {RandomInRange 0 Input.nRow}
 			J = {RandomInRange 0 Input.nColumn}
 		in
