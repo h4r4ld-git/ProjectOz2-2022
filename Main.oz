@@ -204,6 +204,24 @@ in
 					player(id:H.id state:state(mines:H.state.mines flags:H.state.mines map:H.state.map player:H.state.player hp:H.state.hp basePosition:H.state.basePosition mineCharge:H.state.mineCharge gunCharge:H.state.gunCharge hasFlag:H.state.hasFlag foods:food(pos:pt(x:I y:J))|H.state.foods))|{AddFood T I J}
 				end
 			end
+
+			fun {RemoveFood States Food}
+				fun {UnFood Foods Food}
+					case Foods of nil then nil
+					[] H|T then
+						if H.pos.x == Food.pos.x andthen H.pos.y == Food.pos.y then
+							{UnFood T Food} 
+						else
+							H|{UnFood T Food}
+						end
+					end
+				end
+			in
+				case States of nil then nil
+				[] H|T then
+					player(id:H.id state:state(mines:H.state.mines flags:H.state.mines map:H.state.map player:H.state.player hp:H.state.hp basePosition:H.state.basePosition mineCharge:H.state.mineCharge gunCharge:H.state.gunCharge hasFlag:H.state.hasFlag foods:{UnFood H.state.foods Food}))|{RemoveFood T Food}
+				end
+			end
 		in
 			case Msg of get(Mem) then
 				Mem = States
@@ -237,6 +255,8 @@ in
 				{ChangeFlags States NewFlags}
 			[] addFood(I J) then
 				{AddFood States I J}
+			[] removeFood(Food) then
+				{RemoveFood States Food}
 			end
 		end
 		nil}
@@ -267,6 +287,18 @@ in
 			end
 		end
 
+		fun {RemoveFood Foods Pos}
+			case Foods of nil then nil
+			[] H|T then
+				if H.pos.x == Pos.x andthen H.pos.y == Pos.y then
+					{Send WindowPort removeFood(H)}
+					{RemoveFood T Pos}
+				else
+					H|{RemoveFood T Pos}
+				end
+			end
+		end
+
 		Dead
 		FirstHp
 		AfterFoodHp
@@ -279,6 +311,7 @@ in
 		NewPlayerPos
 		NewMines
 		NewFlags
+		NewFoods
 		SecondHp
 		PlayersState
 		IsOnMine
@@ -349,13 +382,16 @@ in
 				end
 				if {OnFood State.foods Position} then
 					AfterFoodHp = FirstHp + 1
-					{ControllerMemory removeFood(Position)}
+					{Send WindowPort lifeUpdate(ID AfterFoodHp)}
+					{ControllerMemory removeFood(food(pos:Position))}
 					{SendToAll sayFoodEaten(ID food(pos:Position))}
 					{Send WindowPort removeFood(food(pos:Position))}
+					NewFoods = {RemoveFood State.foods Position}
 				else
 					AfterFoodHp = FirstHp
+					NewFoods = State.foods
 				end
-				{ControllerMemory update(state(mines:State.mines flags:NewFlags map:State.map player:NewPlayerPos hp:AfterFoodHp basePosition:State.basePosition mineCharge:State.mineCharge gunCharge:State.gunCharge hasFlag:HasFlag) ID)}
+				{ControllerMemory update(state(mines:State.mines flags:NewFlags map:State.map player:NewPlayerPos hp:AfterFoodHp basePosition:State.basePosition mineCharge:State.mineCharge gunCharge:State.gunCharge hasFlag:HasFlag foods:NewFoods) ID)}
 			else
 				NewPlayerPos = State.player
 				NewFlags = State.flags
@@ -364,12 +400,11 @@ in
 			NewPlayerPos = State.player
 			NewFlags = State.flags
 		end
-		
 		{ControllerMemory isOnMine(IsOnMine NewPlayerPos)}
 		if IsOnMine then
 			NewMines = {RemoveMine State.mines NewPlayerPos}
 			SecondHp = AfterFoodHp - 2
-			{ControllerMemory update(state(mines:NewMines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:State.mineCharge gunCharge:State.gunCharge hasFlag:HasFlag) ID)}
+			{ControllerMemory update(state(mines:NewMines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:State.mineCharge gunCharge:State.gunCharge hasFlag:HasFlag foods:NewFoods) ID)}
 			{ControllerMemory mineExploded(Touched NewPlayerPos ID)}
 			{SendToAll sayDamageTaken(ID 2 SecondHp)}
 			{SendToAll sayMineExplode(mine(pos:NewPlayerPos))}
@@ -380,7 +415,6 @@ in
 			NewMines = State.mines
 			DeadOnMine = false
 		end
-		{Send WindowPort lifeUpdate(ID SecondHp)}
 		if DeadOnMine then
 			{SendToAll sayDeath(ID)}
 		else
@@ -414,17 +448,17 @@ in
 			if ItemKind == gun then
 				NewGunCharge = State.gunCharge - 1
 				NewMineCharge = State.mineCharge
-				{ControllerMemory update(state(mines:NewMines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:NewMineCharge gunCharge:NewGunCharge hasFlag:HasFlag) ID)}
+				{ControllerMemory update(state(mines:NewMines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:NewMineCharge gunCharge:NewGunCharge hasFlag:HasFlag foods:NewFoods) ID)}
 			elseif ItemKind == mine then
 				NewGunCharge = State.gunCharge
 				NewMineCharge = State.mineCharge - 1
-				{ControllerMemory update(state(mines:NewMines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:NewMineCharge gunCharge:NewGunCharge hasFlag:HasFlag) ID)}
+				{ControllerMemory update(state(mines:NewMines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:NewMineCharge gunCharge:NewGunCharge hasFlag:HasFlag foods:NewFoods) ID)}
 			else
 				NewGunCharge = State.gunCharge
 				NewMineCharge = State.mineCharge
 			end
 			{SendToAll sayCharge(ID ItemKind)}
-
+			
 			{Send Port fireItem(FireID FireItem)}
 			case FireItem of null then skip
 			[] gun(pos:Pos) then
@@ -435,7 +469,7 @@ in
 					{SendToAll sayShoot(ID Pos)}
 					New2GunCharge = Input.gunCharge
 					New2MineCharge = NewMineCharge
-					{ControllerMemory update(state(mines:New1Mines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:New2MineCharge gunCharge:New2GunCharge hasFlag:HasFlag) ID)}
+					{ControllerMemory update(state(mines:New1Mines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:New2MineCharge gunCharge:New2GunCharge hasFlag:HasFlag foods:NewFoods) ID)}
 					{ControllerMemory shoot(Touched Pos)}
 					case Touched of none then skip
 					[] player then
@@ -457,7 +491,7 @@ in
 					New1Mines = mine(pos:Pos)|NewMines
 					New2GunCharge = NewGunCharge
 					New2MineCharge = Input.mineCharge
-					{ControllerMemory update(state(mines:New1Mines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:New2MineCharge gunCharge:New2GunCharge hasFlag:HasFlag) ID)}
+					{ControllerMemory update(state(mines:New1Mines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:New2MineCharge gunCharge:New2GunCharge hasFlag:HasFlag foods:NewFoods) ID)}
 					{SendToAll sayMinePlaced(ID mine(pos:Pos))}
 					{ControllerMemory placeMine(ID Pos)}
 				end
@@ -465,13 +499,13 @@ in
 				New2GunCharge = NewGunCharge
 				New2MineCharge = NewMineCharge
 			end
-
+			{System.show ID.id}
 			if HasFlag == false andthen {IsOnFlag NewFlags NewPlayerPos ID} then
 				{Send Port takeFlag(PID Flag)}
 				case Flag of flag(pos:Pos color:Color) then
 					if (Pos.x == NewPlayerPos.x andthen Pos.y == NewPlayerPos.y) then
 						NewHasFlag = true
-						{ControllerMemory update(state(mines:New1Mines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:New2MineCharge gunCharge:New2GunCharge hasFlag:NewHasFlag) ID)}
+						{ControllerMemory update(state(mines:New1Mines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:New2MineCharge gunCharge:New2GunCharge hasFlag:NewHasFlag foods:NewFoods) ID)}
 						{SendToAll sayFlagTaken(PID Flag)}
 					else
 						NewHasFlag = HasFlag
@@ -490,7 +524,7 @@ in
 				end
 			end
 		end
-
+		
 		% {System.show endOfLoop(ID)}
 		{WinControl getWin(Win)}
 		if Win == false then
@@ -532,9 +566,9 @@ in
 			J = {RandomInRange 0 Input.nColumn}
 		in
 			if {GetPoint Map I J} == 0 then
-				{ControllerMemory addFood(I J)}
-				{Send WindowPort putFood(food(pos:pt(x:I y:J)))}
-				{SendToAll sayFoodAppeared(food(pos:pt(x:I y:J)))}
+				{ControllerMemory addFood(I+1 J+1)}
+				{Send WindowPort putFood(food(pos:pt(x:I+1 y:J+1)))}
+				{SendToAll sayFoodAppeared(food(pos:pt(x:I+1 y:J+1)))}
 			else
 				{GeneratePos}
 			end
@@ -542,6 +576,7 @@ in
 	in
 		{Delay {RandomInRange Input.foodDelayMin Input.foodDelayMax}}
 		{GeneratePos}
+		{SpawnFood Map}
 	end
 
 	proc {InitThreadForAll Players}
@@ -554,13 +589,13 @@ in
 			{Send WindowPort initSoldier(ID Position)}
 			{Send WindowPort lifeUpdate(ID Input.startHealth)}
 			thread
+				{SpawnFood Input.map}
+			end
+			thread
 				State = state(mines:nil flags:Input.flags map:Input.map player:Position hp:Input.startHealth basePosition:Position mineCharge:Input.mineCharge gunCharge:Input.gunCharge hasFlag:false foods:nil)
 			in
 				{ControllerMemory update(State ID)}
 			 	{Main Port ID State}
-			end
-			thread
-				{SpawnFood Input.map}
 			end
 			{InitThreadForAll Next}
 		end
