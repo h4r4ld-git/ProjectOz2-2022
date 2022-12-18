@@ -68,6 +68,107 @@ in
 					end
 				end
 			end
+
+			fun {MinesContaines Mines Position}
+				case Mines of nil then false
+				[] H|T then
+					if H.pos.x == Position.x andthen H.pos.y == Position.y then
+						true
+					else
+						{MinesContaines T Position}
+					end
+				end
+			end
+
+			fun {OnMine States Position}
+				case States of nil then false
+				[] H|T then
+					if {MinesContaines H.state.mines Position} then
+						true
+					else
+						{OnMine T Position}
+					end
+				end
+			end
+
+			fun {MineExploded CurrStates Position ID}
+				case CurrStates of nil then nil
+				[] H|T then
+					if (H.id > ID orelse H.id < ID) andthen ((H.state.player.x - Position.x) == ~1 orelse (H.state.player.x - Position.x) == 1) andthen ((H.state.player.y - Position.y) == ~1 orelse (H.state.player.y - Position.y) == 1) then
+						H|{MineExploded T Position ID}
+					else
+						{MineExploded T Position ID}
+					end
+				end
+			end
+
+			fun {UpdateForAllMines States Players}
+				fun {IsTouched CurrPlayers Player}
+					case CurrPlayers of nil then false
+					[] H|T then
+						if H.id == Player.id then
+							true
+						else
+							{IsTouched T Player}
+						end
+					end
+				end
+			in
+				case States of nil then nil
+				[] H|T then
+					if {IsTouched Players H} then
+						player(id:H.id state:state(mines:H.state.mines flags:H.state.flags map:H.state.map player:H.state.player hp:H.state.hp-1 basePosition:H.state.basePosition mineCharge:H.state.mineCharge gunCharge:H.state.gunCharge))|{UpdateForAllMines T Players}
+					else
+						H|{UpdateForAllMines T Players}
+					end
+				end
+			end
+
+			fun {UpdateMines States Position}
+				fun {NewMines Mines Position}
+					case Mines of nil then nil
+					[] H|T then
+						if H.pos.x == Position.x andthen H.pos.y == Position.y then
+							{NewMines T Position}
+						else
+							H|{NewMines T Position}
+						end
+					end
+				end
+			in
+				case States of nil then nil
+				[] H|T then
+					player(id:H.id state:state(mines:{NewMines H.state.mines Position} flags:H.state.flags map:H.state.map player:H.state.player hp:H.state.hp basePosition:H.state.basePosition mineCharge:H.state.mineCharge gunCharge:H.state.gunCharge))|{UpdateMines T Position}
+				end
+			end
+
+			fun {ShootPlayer States Position}
+				case States of nil then nil
+				[] H|T then
+					if H.state.player.x == Position.x andthen H.state.player.y == Position.y then
+						H
+					else
+						{ShootPlayer T Position}
+					end
+				end
+			end
+
+			fun {Shoot States Pos}
+				case States of nil then none
+				[] H|T then
+					if {MinesContaines H.state.mines Pos} then
+						mine
+					elseif H.state.player.x == Pos.x andthen H.state.player.y == Pos.y then
+						player
+					else
+						{Shoot T Pos}
+					end
+				end
+			end
+
+			fun {PlaceMine States ID Pos}
+				
+			end
 		in
 			case Msg of get(Mem) then
 				Mem = States
@@ -78,11 +179,25 @@ in
 			[] update(State ID) then
 				{UpdateState States ID.id State}
 			[] isDead(Dead ID) then
-				Dead = {GetID States ID.id}.hp == 0
+				Dead = {GetID States ID.id}.hp < 1
 				States
 			[] validMove(Valid Position) then
 				Valid = {IsValid States Position}
 				States
+			[] isOnMine(IsOnMine Position) then
+				IsOnMine = {OnMine States Position}
+				States
+			[] mineExploded(Touched Position ID) then
+				Touched = {MineExploded States Position ID.id}
+				{UpdateMines {UpdateForAllMines States Touched} Position}
+			[] shootPlayer(TouchedPlayer Pos) then
+				TouchedPlayer = {ShootPlayer States Pos}
+				{UpdateState States TouchedPlayer.id state(mines:TouchedPlayer.state.mines flags:TouchedPlayer.state.flags map:TouchedPlayer.state.map player:TouchedPlayer.state.player hp:TouchedPlayer.state.hp basePosition:TouchedPlayer.state.basePosition mineCharge:TouchedPlayer.state.mineCharge gunCharge:TouchedPlayer.state.gunCharge)}
+			[] shoot(Touched Pos) then
+				Touched = {Shoot States Pos}
+				States
+			[] placeMine(ID Pos) then
+				{UpdateState States ID.id {PlaceMine States ID Pos}}
 			end
 		end
 		nil}
@@ -108,16 +223,22 @@ in
 		NewFlags
 		NewPlayer
 		NewValue
+		RespawnHp
 		NewHp
 		BaseValue
 		PlayersState
 		NoPlayer
+		IsOnMine
+		NewState
+		Touched
+		DeadOnMine
 	in
 		{ControllerMemory isDead(Dead ID)}
 		if Dead == true then 
 			{Delay respawnDelay}
-			NewHp = Input.startHealth
-			{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:State.player hp:NewHp basePosition:State.basePosition) ID)}
+			RespawnHp = Input.startHealth
+			{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:State.player hp:RespawnHp basePosition:State.basePosition mineCharge:State.mineCharge gunCharge:State.gunCharge) ID)}
+			{Send WindowPort lifeUpdate(ID Input.startHealth)}
 			{Send Port respawn}
 		end
 
@@ -131,7 +252,7 @@ in
 				{SendToAll sayMoved(ID Position)}
 				{Send WindowPort moveSoldier(ID Position)}
 				NewPlayer = Position
-				{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:NewPlayer hp:State.hp basePosition:State.basePosition) ID)}
+				{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:NewPlayer hp:State.hp basePosition:State.basePosition mineCharge:State.mineCharge gunCharge:State.gunCharge) ID)}
 			else
 				NewPlayer = State.player
 			end
@@ -139,13 +260,82 @@ in
 			NewPlayer = State.player
 		end
 		
+		{ControllerMemory isOnMine(IsOnMine Position)}
+		if IsOnMine then
+			NewHp = State.hp - 2
+			{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:State.player hp:NewHp basePosition:State.basePosition mineCharge:State.mineCharge gunCharge:State.gunCharge) ID)}
+			{ControllerMemory mineExploded(Touched Position ID)}
+			{SendToAll sayDamageTaken(ID 2 NewHp)}
+			{SendToAll sayMineExplode(mine(pos:Position))}
+			{ForAll Touched proc {$ T} {SendToAll sayDamageTaken(T.id 1 T.state.hp)} end}
+			DeadOnMine = NewHp == 0
+		else
+			DeadOnMine = false
+		end
+		
+		if DeadOnMine then
+			{SendToAll sayDeath(ID)}
+		else
+			ID
+			ItemKind
+			FireItem
+			FireID
+			NewMineCharge
+			NewGunCharge
+		in
+			{Send Port chargeItem(ID ItemKind)}
+			if ItemKind == gun then
+				NewGunCharge = State.gunCharge - 1
+				NewMineCharge = State.mineCharge
+				{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:State.player hp:State.hp basePosition:State.basePosition mineCharge:State.mineCharge gunCharge:State.gunCharge-1) ID)}
+			elseif ItemKind == mine then
+				NewGunCharge = State.gunCharge
+				NewMineCharge = State.mineCharge - 1
+				{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:State.player hp:State.hp basePosition:State.basePosition mineCharge:State.mineCharge-1 gunCharge:State.gunCharge) ID)}
+			end
+			{SendToAll sayCharge(ID ItemKind)}
+
+			{Send Port fireItem(FireID FireItem)}
+			case FireItem of null then skip
+			[] gun(pos:Pos) then
+				if NewGunCharge == 0 then
+					Touched
+				in
+					{SendToAll sayShoot(ID Pos)}
+					{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:State.player hp:State.hp basePosition:State.basePosition mineCharge:State.mineCharge gunCharge:Input.gunCharge) ID)}
+					{ControllerMemory shoot(Touched Pos)}
+					case Touched of none then skip
+					[] player then
+						TouchedPlayer
+					in
+						{ControllerMemory shootPlayer(TouchedPlayer Pos)}
+						{SendToAll sayDamageTaken(TouchedPlayer.id 1 TouchedPlayer.state.hp)}
+					[] mine then
+						TouchedPlayers
+					in
+						{ControllerMemory mineExploded(TouchedPlayers Pos ID)}
+						{SendToAll sayMineExplode(mine(pos:Pos))}
+						{ForAll TouchedPlayers proc {$ T} {SendToAll sayDamageTaken(T.id 1 T.state.hp)} end}
+					end
+				end
+			[] mine(pos:Pos) then
+				if NewMineCharge == 0 andthen NewPlayer.x == Pos.x andthen NewPlayer.y == Pos.y then
+					{ControllerMemory update(state(mines:State.mines flags:State.flags map:State.map player:State.player hp:State.hp basePosition:State.basePosition mineCharge:Input.mineCharge gunCharge:State.gunCharge) ID)}
+					{SendToAll sayMinePlaced(ID mine(pos:Pos))}
+					{ControllerMemory placeMine(ID Pos)}
+				end
+			end
+
+
+		end
 
 		NewMines = State.mines
 		NewFlags = State.flags
 
 		% {System.show endOfLoop(ID)}
 		{SimulatedThinking}
-		{Main Port ID state(mines:NewMines flags:NewFlags map:State.map player:NewPlayer hp:State.hp basePosition:State.basePosition)}
+		{ControllerMemory getIDState(NewState ID)}
+		{Main Port ID NewState}
 	end
 
 	fun {GetPoint Map X Y}
@@ -184,7 +374,7 @@ in
 			{Send WindowPort initSoldier(ID Position)}
 			{Send WindowPort lifeUpdate(ID Input.startHealth)}
 			thread
-				State = state(mines:nil flags:Input.flags map:Input.map player:Position hp:Input.startHealth basePosition:Position)
+				State = state(mines:nil flags:Input.flags map:Input.map player:Position hp:Input.startHealth basePosition:Position mineCharge:Input.mineCharge gunCharge:Input.gunCharge)
 			in
 				{ControllerMemory update(State ID)}
 			 	{Main Port ID State}
