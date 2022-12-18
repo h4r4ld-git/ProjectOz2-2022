@@ -123,10 +123,12 @@ in
 
 		{Send Port move(ID Position)}
 		{ControllerMemory validMove(NoPlayer Position)}
+		{System.show pos1(Position.x Position.y)}
+		{System.show pos2(State.player.x State.player.y)}
 		if NoPlayer then
-			BaseValue = {GetPoint State.map State.basePosition.x State.basePosition.y} 
-			NewValue = {GetPoint State.map Position.x Position.y}
-			ValidMove = (NewValue == 0 orelse NewValue == BaseValue) andthen (((State.player.x - Position.x) < ~1) orelse ((State.player.x - Position.x) > 1) orelse ((State.player.y - Position.y) < ~1) orelse ((State.player.y - Position.y) > 1))
+			BaseValue = {GetPoint State.map State.basePosition.x-1 State.basePosition.y-1} 
+			NewValue = {GetPoint State.map Position.x-1 Position.y-1}
+			ValidMove = (NewValue == 0 orelse NewValue == BaseValue) andthen (((State.player.x - Position.x) > ~2) andthen ((State.player.x - Position.x) < 2) andthen ((State.player.y - Position.y) > ~2) andthen ((State.player.y - Position.y) < 2))
 			if ValidMove then
 				{SendToAll sayMoved(ID Position)}
 				{Send WindowPort moveSoldier(ID Position)}
