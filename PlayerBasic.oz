@@ -97,10 +97,15 @@ in
 			[] sayFlagTaken(ID Flag) then {SayFlagTaken State ID Flag}
 			[] sayFlagDropped(ID Flag) then {SayFlagDropped State ID flag}
 			[] isDead(?Dead) then {IsDead Dead State}
+			[] respawn() then {Respawn State}
 			end
     end
 
 	%%%% TODO Message functions
+
+	fun {Respawn State}
+		{StateUpdate State.id {List.nth Input.spawnPoints State.id} State.map Input.startHealth null 0 0 State.startPosition}
+	end
 
 	fun {IsDead ?Dead State}
 		Dead = State.hp == 0
