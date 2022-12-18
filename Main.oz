@@ -499,7 +499,6 @@ in
 				New2GunCharge = NewGunCharge
 				New2MineCharge = NewMineCharge
 			end
-			{System.show ID.id}
 			if HasFlag == false andthen {IsOnFlag NewFlags NewPlayerPos ID} then
 				{Send Port takeFlag(PID Flag)}
 				case Flag of flag(pos:Pos color:Color) then
