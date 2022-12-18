@@ -311,7 +311,11 @@ in
 	end
 
 	fun {SayDeath State ID}
-		State
+		if State.id == ID then
+			{StateUpdate State.id State.position State.map 0 State.flag State.mineReloads State.gunReloads State.startPosition}
+		else 
+			State
+		end
 	end
 
 	fun {SayDamageTaken State ID Damage LifeLeft}
@@ -340,7 +344,8 @@ in
 
 	fun {SayFlagTaken State ID Flag}
 		if State.id == ID then {StateUpdate State.id State.position State.map State.hp Flag State.mineReloads State.gunReloads State.startPosition}
-		else State
+		else 
+			State
 		end
 	end
 
