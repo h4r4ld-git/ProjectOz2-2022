@@ -267,7 +267,11 @@ in
 
 	fun {ChargeItem State ?ID ?Kind} 
 		ID = State.id
-		Kind = null
+		if State.gunReloads == 0 then
+			Kind = gun()
+		else
+			Kind = mine()
+		end
 		State
 	end
 
