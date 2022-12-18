@@ -506,6 +506,7 @@ in
 					if (Pos.x == NewPlayerPos.x andthen Pos.y == NewPlayerPos.y) then
 						NewHasFlag = true
 						{ControllerMemory update(state(mines:New1Mines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:New2MineCharge gunCharge:New2GunCharge hasFlag:NewHasFlag foods:NewFoods) ID)}
+						{Send WindowPort removeFlag(flag(pos:Pos color:Color))}
 						{SendToAll sayFlagTaken(PID Flag)}
 					else
 						NewHasFlag = HasFlag
@@ -520,6 +521,7 @@ in
 			if ActualValue == BaseValue andthen NewHasFlag == true then
 				{Send Port dropFlag(PID1 Flag1)}
 				case Flag1 of flag(pos:Pos color:Color) then
+					{Send WindowPort putFlag(flag(pos:Pos color:Color))}
 					{WinControl setWin}
 				end
 			end
