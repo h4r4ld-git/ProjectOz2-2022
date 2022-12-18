@@ -287,10 +287,11 @@ in
 		if State.gunReloads > 0 then
 			C in
 			C = {RandChoice [pt(x: State.position.x+1 y: State.position.y) pt(x: State.position.x-1 y: State.position.y) pt(x: State.position.x y: State.position.y+1) pt(x: State.position.x y: State.position.y-1)] 4}
-			Kind = gun(C)
+			Kind = gun(pos:C)
 		elseif State.mineReloads > 0 then
-			Kind = mine(State.position)
+			Kind = mine(pos:State.position)
 		end
+		Kind = null
 		State
 	end
 
@@ -336,9 +337,7 @@ in
 	%drop when at his spawnpoint
 	fun {DropFlag State ?ID ?Flag}
 		ID = State.id
-		if State.position == {List.nth Input.spawnPoints ID} then
-			Flag = null
-		end
+		Flag = flag(pos:State.position color:State.id.color)
 		State
 	end
 
