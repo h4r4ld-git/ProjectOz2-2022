@@ -36,6 +36,7 @@ define
 	StateModification
 
 	UpdateLife
+	WinnerWidget
 in
 
 %%%%% Build the initial window and set it up (call only once)
@@ -306,6 +307,12 @@ in
 		end
 	end
 
+	proc {WinnerWidget Color}
+		D=td(button(text:"Winner is "#Color) button(text:"Close" action:toplevel#close))
+	in
+		{{QTk.build D} show}
+	end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	fun{StartWindow}
@@ -348,6 +355,8 @@ in
 			{TreatStream T Grid {RemoveSoldier Grid ID State}}
 		[] explosion(Position)|T then
 			{TreatStream T Grid State}
+		[] winner(Color)|T then
+			{WinnerWidget Color}
 		[] _|T then
 			{TreatStream T Grid State}
 		end

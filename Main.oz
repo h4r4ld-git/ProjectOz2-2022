@@ -279,6 +279,7 @@ in
 			case Mines of nil then nil
 			[] H|T then
 				if H.pos.x == Pos.x andthen H.pos.y == Pos.y then
+					{Send WindowPort explosion(Pos)}
 					{Send WindowPort removeMine(H)}
 					{RemoveMine T Pos}
 				else
@@ -480,6 +481,7 @@ in
 					[] mine then
 						TouchedPlayers
 					in
+						{Send WindowPort explosion(Pos)}
 						{Send WindowPort removeMine(mine(pos:Pos))}
 						{ControllerMemory mineExploded(TouchedPlayers Pos ID)}
 						{SendToAll sayMineExplode(mine(pos:Pos))}
@@ -493,6 +495,7 @@ in
 					New2MineCharge = Input.mineCharge
 					{ControllerMemory update(state(mines:New1Mines flags:NewFlags map:State.map player:NewPlayerPos hp:SecondHp basePosition:State.basePosition mineCharge:New2MineCharge gunCharge:New2GunCharge hasFlag:HasFlag foods:NewFoods) ID)}
 					{SendToAll sayMinePlaced(ID mine(pos:Pos))}
+					{Send WindowPort putMine(mine(pos:Pos))}
 					{ControllerMemory placeMine(ID Pos)}
 				end
 			else
@@ -532,6 +535,10 @@ in
 			{SimulatedThinking}
 			{ControllerMemory getIDState(NewState ID)}
 			{Main Port ID NewState}
+		else
+			if DeadOnMine == false andthen NewHasFlag == true then
+				{Send WindowPort winner(ID.color#" with Player "#ID.id)}
+			end
 		end
 	end
 
@@ -609,7 +616,7 @@ in
 		% Open window
 		{Send WindowPort buildWindow}
 		{System.show buildWindow}
-
+		
         % Create port for players
 		PlayersPorts = {DoListPlayer Input.players Input.colors 1}
 
